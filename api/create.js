@@ -38,8 +38,6 @@ function generatePassword(length = 10) {
 
 /**
  * Fungsi membuat user (dinamis)
- * @param {string} serverName - Nama server
- * @param {object} pteroConfig - Config (domain, apiKey)
  */
 async function createUser(serverName, pteroConfig) {
     const username = serverName.toLowerCase().replace(/[^a-z0-9]/g, '') + `_${Math.random().toString(36).substring(2, 6)}`;
@@ -68,6 +66,7 @@ async function createUser(serverName, pteroConfig) {
         );
         return { ...response.data.attributes, password: password };
     } catch (error) {
+        // PERBAIKAN PENTING: Mengurai error Axios
         console.error("Gagal membuat user:", error.response ? error.response.data : error.message);
         if (error.response && error.response.data && error.response.data.errors) {
             const errorMsg = error.response.data.errors.map(e => e.detail).join(' ');
@@ -79,11 +78,6 @@ async function createUser(serverName, pteroConfig) {
 
 /**
  * Fungsi membuat server (dinamis)
- * @param {object} user - Objek user dari Pterodactyl
- * @param {string} serverName - Nama server
- * @param {number} ram - Jumlah RAM
- * @param {object} pteroConfig - Config (domain, apiKey)
- * @param {object} sharedConfig - Config (locationId, nestId, eggId)
  */
 async function createServer(user, serverName, ram, pteroConfig, sharedConfig) {
     const memoryLimit = parseInt(ram); 
@@ -125,6 +119,7 @@ async function createServer(user, serverName, ram, pteroConfig, sharedConfig) {
         );
         return response.data.attributes;
     } catch (error) {
+        // PERBAIKAN PENTING: Mengurai error Axios
         console.error("Gagal membuat server:", error.response ? error.response.data.errors : error.message);
         if (error.response && error.response.data && error.response.data.errors) {
             const errorMsg = error.response.data.errors.map(e => e.detail).join(' ');
