@@ -12,6 +12,19 @@
         <h1>🚀 Buat Server Pterodactyl</h1>
         
         <form id="createServerForm" class="form">
+            
+            <div>
+                <label>Tipe Panel</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="panel_type" value="private" checked> Private
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="panel_type" value="public"> Public
+                    </label>
+                </div>
+            </div>
+
             <div>
                 <label for="secretKey">Kunci Rahasia (Secret Key)</label>
                 <input id="secretKey" type="password" required>
@@ -42,28 +55,25 @@
     </div>
 
     <script>
-        // Menunggu sampai semua elemen HTML dimuat
         document.addEventListener('DOMContentLoaded', () => {
             
-            // Ambil elemen-elemen penting
             const serverForm = document.getElementById('createServerForm');
             const submitButton = document.getElementById('submitButton');
             const resultDiv = document.getElementById('result');
 
-            // Tambahkan 'listener' ke form
             serverForm.addEventListener('submit', async function(e) {
-                e.preventDefault(); // Mencegah form mengirim data secara tradisional
+                e.preventDefault(); 
 
                 // Ambil nilai dari input
+                const panelType = document.querySelector('input[name="panel_type"]:checked').value; // BARU
                 const secretKey = document.getElementById('secretKey').value;
                 const serverName = document.getElementById('serverName').value;
                 const ram = document.getElementById('ram').value;
 
-                // Ubah tampilan tombol dan hasil
                 submitButton.disabled = true;
                 submitButton.textContent = 'Sedang Memproses...';
-                resultDiv.className = 'result'; // Reset style hasil
-                resultDiv.textContent = '';     // Kosongkan hasil
+                resultDiv.className = 'result';
+                resultDiv.textContent = '';
 
                 try {
                     // Kirim data ke API kita (/api/create)
@@ -72,20 +82,18 @@
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ serverName, ram, secretKey }),
+                        // Tambahkan panelType di body
+                        body: JSON.stringify({ serverName, ram, secretKey, panelType }), // DIPERBARUI
                     });
 
-                    // Ambil data JSON dari respon
                     const data = await response.json();
 
-                    // Periksa jika respon GAGAL (status bukan 2xx)
                     if (!response.ok) {
-                        // Lemparkan error agar ditangkap oleh 'catch'
                         throw new Error(data.error || 'Gagal membuat server.');
                     }
 
                     // Jika SUKSES
-                    resultDiv.className = 'result result-success'; // Tampilkan box sukses
+                    resultDiv.className = 'result result-success';
                     resultDiv.innerHTML = `<strong>✅ Semua Berhasil Disiapkan!</strong>
 <pre>
 URL Panel: ${data.panelUrl}
@@ -98,12 +106,11 @@ RAM:       ${data.serverRam} MB
 </pre>`;
 
                 } catch (err) {
-                    // Jika GAGAL (dari 'throw' di atas)
-                    resultDiv.className = 'result result-error'; // Tampilkan box error
+                    // Jika GAGAL
+                    resultDiv.className = 'result result-error';
                     resultDiv.innerHTML = `<strong>❌ Gagal!</strong><p>${err.message}</p>`;
                 
                 } finally {
-                    // Apapun hasilnya (sukses/gagal), kembalikan tombol ke normal
                     submitButton.disabled = false;
                     submitButton.textContent = 'Buat Server Sekarang';
                 }
