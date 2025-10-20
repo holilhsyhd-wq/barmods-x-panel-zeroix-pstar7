@@ -188,7 +188,7 @@ export default async function handler(req, res) {
         });
 
     } catch (error) {
-        // --- PERBAIKAN: Blok penangkap error utama ---
+        // --- INI ADALAH PERBAIKAN UTAMA ---
         console.error("Handler Error:", error.message);
         
         // Kirim error Pterodactyl (seperti "nama sudah ada") sebagai 409 Conflict
@@ -198,11 +198,11 @@ export default async function handler(req, res) {
         }
         
         // Kirim error spesifik lainnya
-        // Tambahkan cek untuk error "user"
         if (error.message.toLowerCase().includes("email has already been taken")) {
              return res.status(409).json({ error: "Terjadi konflik, nama user/email mungkin sudah ada." });
         }
         
+        // Ini adalah penangkap error default
         return res.status(500).json({ error: error.message || 'Terjadi kesalahan internal server.' });
     }
 }
