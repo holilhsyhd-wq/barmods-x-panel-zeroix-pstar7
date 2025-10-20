@@ -192,11 +192,17 @@ export default async function handler(req, res) {
         console.error("Handler Error:", error.message);
         
         // Kirim error Pterodactyl (seperti "nama sudah ada") sebagai 409 Conflict
+        // Menggunakan toLowerCase() agar lebih aman
         if (error.message.toLowerCase().includes("a server with this name already exists")) {
              return res.status(409).json({ error: "Nama server tersebut sudah dipakai." });
         }
         
         // Kirim error spesifik lainnya
+        // Tambahkan cek untuk error "user"
+        if (error.message.toLowerCase().includes("email has already been taken")) {
+             return res.status(409).json({ error: "Terjadi konflik, nama user/email mungkin sudah ada." });
+        }
+        
         return res.status(500).json({ error: error.message || 'Terjadi kesalahan internal server.' });
     }
 }
