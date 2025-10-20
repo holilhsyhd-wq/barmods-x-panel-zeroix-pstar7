@@ -1,8 +1,11 @@
+// --- DEPENDENSI ---
+// Tambahkan 'node-fetch' versi 2 (CommonJS)
+const fetch = require('node-fetch');
+
 // --- FUNGSI HELPER (SEKARANG MENERIMA 'config' SEBAGAI ARGUMEN) ---
 
 async function createUser(serverName, config) {
-    // const pterodactyl = getPterodactylConfig(); <-- Dihapus
-    const url = `${config.domain}/api/application/users`; // <-- Menggunakan config.domain
+    const url = `${config.domain}/api/application/users`; 
     
     const randomString = Math.random().toString(36).substring(7);
     const email = `${serverName.toLowerCase().replace(/\s+/g, '')}@${randomString}.com`;
@@ -19,10 +22,10 @@ async function createUser(serverName, config) {
     };
 
     try {
-        const response = await fetch(url, {
+        const response = await fetch(url, { // 'fetch' ini sekarang merujuk ke 'node-fetch'
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${config.apiKey}`, // <-- Menggunakan config.apiKey
+                'Authorization': `Bearer ${config.apiKey}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
@@ -44,13 +47,12 @@ async function createUser(serverName, config) {
 }
 
 async function createServer(serverName, memory, pterodactylUserId, config) {
-    // const pterodactyl = getPterodactylConfig(); <-- Dihapus
-    const url = `${config.domain}/api/application/servers`; // <-- Menggunakan config.domain
+    const url = `${config.domain}/api/application/servers`;
 
     const serverData = {
         name: serverName,
         user: pterodactylUserId,
-        egg: config.eggId, // <-- Menggunakan config.eggId
+        egg: config.eggId,
         docker_image: "ghcr.io/parkervcp/yolks:nodejs_18",
         startup: "if [[ -d .git ]]; then git pull; fi; if [[ ! -z ${NODE_PACKAGES} ]]; then /usr/local/bin/npm install ${NODE_PACKAGES}; fi; if [[ -f /home/container/package.json ]]; then /usr/local/bin/npm install; fi; {{CMD_RUN}}",
         environment: {
@@ -60,9 +62,9 @@ async function createServer(serverName, memory, pterodactylUserId, config) {
         limits: {
             memory: parseInt(memory),
             swap: 0,
-            disk: config.disk, // <-- Menggunakan config.disk
+            disk: config.disk,
             io: 500,
-            cpu: config.cpu, // <-- Menggunakan config.cpu
+            cpu: config.cpu,
         },
         feature_limits: {
             databases: 1,
@@ -70,17 +72,17 @@ async function createServer(serverName, memory, pterodactylUserId, config) {
             backups: 1
         },
         deploy: {
-            locations: [config.locationId], // <-- Menggunakan config.locationId
+            locations: [config.locationId],
             dedicated_ip: false,
             port_range: []
         }
     };
 
     try {
-        const response = await fetch(url, {
+        const response = await fetch(url, { // 'fetch' ini sekarang merujuk ke 'node-fetch'
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${config.apiKey}`, // <-- Menggunakan config.apiKey
+                'Authorization': `Bearer ${config.apiKey}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
@@ -102,18 +104,17 @@ async function createServer(serverName, memory, pterodactylUserId, config) {
 }
 
 // --- API HANDLER UTAMA ---
-export default async function handler(req, res) {
+// Gunakan 'module.exports' (CommonJS) agar sesuai dengan 'require'
+module.exports = async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(405).json({ success: false, error: 'Metode tidak diizinkan' });
     }
 
-    // 1. Ambil semua data dari body, termasuk 'panelType'
     const { serverName, ram, secretKey, panelType } = req.body;
 
     let config;
     let APP_SECRET_KEY;
 
-    // 2. Pilih set konfigurasi berdasarkan 'panelType'
     if (panelType === 'private') {
         APP_SECRET_KEY = process.env.PRIVATE_APP_SECRET_KEY;
         config = {
@@ -138,12 +139,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: 'Tipe panel tidak valid.' });
     }
     
-    // 3. Autentikasi menggunakan SECRET_KEY yang sesuai
     if (secretKey !== APP_SECRET_KEY) {
         return res.status(403).json({ success: false, error: 'Kunci Rahasia salah.' });
     }
 
-    // 4. Validasi input
     if (!serverName || !ram || !config.domain || !config.apiKey || !config.eggId) {
         return res.status(400).json({ 
             success: false, 
@@ -152,7 +151,6 @@ export default async function handler(req, res) {
     }
 
     try {
-        // 5. Langkah 1: Buat Pengguna (kirim 'config' yang sudah dipilih)
         const userResult = await createUser(serverName, config);
         if (!userResult.success) {
             return res.status(500).json(userResult);
@@ -161,7 +159,6 @@ export default async function handler(req, res) {
         const newUser = userResult.user;
         const newUserPassword = userResult.password;
 
-        // 6. Langkah 2: Buat Server (kirim 'config' yang sudah dipilih)
         const serverResult = await createServer(serverName, ram, newUser.id, config);
         if (!serverResult.success) {
             return res.status(500).json({ 
@@ -175,10 +172,9 @@ export default async function handler(req, res) {
 
         const serverInfo = serverResult.data;
 
-        // 7. Kirim respon sukses
         res.status(201).json({
             success: true,
-            panelUrl: config.domain, // <-- Kirim domain yang benar
+            panelUrl: config.domain,
             username: newUser.username,
             email: newUser.email,
             password: newUserPassword,
@@ -189,4 +185,4 @@ export default async function handler(req, res) {
     } catch (error) {
         res.status(500).json({ success: false, error: 'Terjadi kesalahan internal: ' + error.message });
     }
-}
+};
