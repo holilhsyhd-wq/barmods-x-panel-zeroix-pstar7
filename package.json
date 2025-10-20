@@ -7,5 +7,8 @@
     "start": "node api/create.js"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
 }
