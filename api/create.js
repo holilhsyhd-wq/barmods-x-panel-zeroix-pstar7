@@ -3,7 +3,7 @@ require('dotenv').config();
 // Gunakan 'axios' karena sudah ada di 'package.json' Anda
 const axios = require('axios');
 
-// 1. AMBIL KONFIGURASI (Berdasarkan file Anda, tapi DIPERBAIKI)
+// 1. AMBIL KONFIGURASI
 const config = {
     // Config untuk server Private
     private: {
@@ -129,7 +129,7 @@ async function createServer(user, serverName, ram, pteroConfig, sharedConfig) {
     }
 }
 
-// --- 3. HANDLER UTAMA (Logika file Anda + perbaikan Saya) ---
+// --- 3. HANDLER UTAMA (Ini bagian terpenting) ---
 export default async function handler(req, res) {
 
     // Setel Header CORS
