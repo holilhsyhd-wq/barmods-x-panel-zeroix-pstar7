@@ -1,20 +1,8 @@
-// --- FUNGSI DARI BOT ANDA (DIMODIFIKASI UNTUK ENV VARS) ---
+// --- FUNGSI HELPER (SEKARANG MENERIMA 'config' SEBAGAI ARGUMEN) ---
 
-// Fungsi ini membaca konfigurasi dari Environment Variables Vercel
-function getPterodactylConfig() {
-    return {
-        domain: process.env.PTERODACTYL_DOMAIN,
-        apiKey: process.env.PTERODACTYL_API_KEY,
-        eggId: parseInt(process.env.PTERODACTYL_EGG_ID, 10),
-        disk: parseInt(process.env.PTERODACTYL_DISK, 10),
-        cpu: parseInt(process.env.PTERODACTYL_CPU, 10),
-        locationId: parseInt(process.env.PTERODACTYL_LOCATION_ID, 10),
-    };
-}
-
-async function createUser(serverName) {
-    const pterodactyl = getPterodactylConfig();
-    const url = `${pterodactyl.domain}/api/application/users`;
+async function createUser(serverName, config) {
+    // const pterodactyl = getPterodactylConfig(); <-- Dihapus
+    const url = `${config.domain}/api/application/users`; // <-- Menggunakan config.domain
     
     const randomString = Math.random().toString(36).substring(7);
     const email = `${serverName.toLowerCase().replace(/\s+/g, '')}@${randomString}.com`;
@@ -34,7 +22,7 @@ async function createUser(serverName) {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${pterodactyl.apiKey}`,
+                'Authorization': `Bearer ${config.apiKey}`, // <-- Menggunakan config.apiKey
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
@@ -55,26 +43,26 @@ async function createUser(serverName) {
     }
 }
 
-async function createServer(serverName, memory, pterodactylUserId) {
-    const pterodactyl = getPterodactylConfig();
-    const url = `${pterodactyl.domain}/api/application/servers`;
+async function createServer(serverName, memory, pterodactylUserId, config) {
+    // const pterodactyl = getPterodactylConfig(); <-- Dihapus
+    const url = `${config.domain}/api/application/servers`; // <-- Menggunakan config.domain
 
     const serverData = {
         name: serverName,
         user: pterodactylUserId,
-        egg: pterodactyl.eggId,
+        egg: config.eggId, // <-- Menggunakan config.eggId
         docker_image: "ghcr.io/parkervcp/yolks:nodejs_18",
         startup: "if [[ -d .git ]]; then git pull; fi; if [[ ! -z ${NODE_PACKAGES} ]]; then /usr/local/bin/npm install ${NODE_PACKAGES}; fi; if [[ -f /home/container/package.json ]]; then /usr/local/bin/npm install; fi; {{CMD_RUN}}",
         environment: {
-            USER_ID: 1, // Diambil dari Telegram ID, di web kita set default saja
+            USER_ID: 1, 
             CMD_RUN: "node index.js" 
         },
         limits: {
             memory: parseInt(memory),
             swap: 0,
-            disk: pterodactyl.disk,
+            disk: config.disk, // <-- Menggunakan config.disk
             io: 500,
-            cpu: pterodactyl.cpu,
+            cpu: config.cpu, // <-- Menggunakan config.cpu
         },
         feature_limits: {
             databases: 1,
@@ -82,7 +70,7 @@ async function createServer(serverName, memory, pterodactylUserId) {
             backups: 1
         },
         deploy: {
-            locations: [pterodactyl.locationId],
+            locations: [config.locationId], // <-- Menggunakan config.locationId
             dedicated_ip: false,
             port_range: []
         }
@@ -92,7 +80,7 @@ async function createServer(serverName, memory, pterodactylUserId) {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${pterodactyl.apiKey}`,
+                'Authorization': `Bearer ${config.apiKey}`, // <-- Menggunakan config.apiKey
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
@@ -113,31 +101,59 @@ async function createServer(serverName, memory, pterodactylUserId) {
     }
 }
 
-
 // --- API HANDLER UTAMA ---
-// Vercel akan otomatis membaca 'export default' ini
 export default async function handler(req, res) {
-    // 1. Hanya izinkan metode POST
     if (req.method !== 'POST') {
         return res.status(405).json({ success: false, error: 'Metode tidak diizinkan' });
     }
 
-    const { serverName, ram, secretKey } = req.body;
+    // 1. Ambil semua data dari body, termasuk 'panelType'
+    const { serverName, ram, secretKey, panelType } = req.body;
+
+    let config;
+    let APP_SECRET_KEY;
+
+    // 2. Pilih set konfigurasi berdasarkan 'panelType'
+    if (panelType === 'private') {
+        APP_SECRET_KEY = process.env.PRIVATE_APP_SECRET_KEY;
+        config = {
+            domain: process.env.PRIVATE_PTERODACTYL_DOMAIN,
+            apiKey: process.env.PRIVATE_PTERODACTYL_API_KEY,
+            eggId: parseInt(process.env.PRIVATE_PTERODACTYL_EGG_ID, 10),
+            disk: parseInt(process.env.PRIVATE_PTERODACTYL_DISK, 10),
+            cpu: parseInt(process.env.PRIVATE_PTERODACTYL_CPU, 10),
+            locationId: parseInt(process.env.PRIVATE_PTERODACTYL_LOCATION_ID, 10),
+        };
+    } else if (panelType === 'public') {
+        APP_SECRET_KEY = process.env.PUBLIC_APP_SECRET_KEY;
+        config = {
+            domain: process.env.PUBLIC_PTERODACTYL_DOMAIN,
+            apiKey: process.env.PUBLIC_PTERODACTYL_API_KEY,
+            eggId: parseInt(process.env.PUBLIC_PTERODACTYL_EGG_ID, 10),
+            disk: parseInt(process.env.PUBLIC_PTERODACTYL_DISK, 10),
+            cpu: parseInt(process.env.PUBLIC_PTERODACTYL_CPU, 10),
+            locationId: parseInt(process.env.PUBLIC_PTERODACTYL_LOCATION_ID, 10),
+        };
+    } else {
+        return res.status(400).json({ success: false, error: 'Tipe panel tidak valid.' });
+    }
     
-    // 2. Autentikasi: Ganti 'authorizedUserId' dengan kunci rahasia dari env
-    const APP_SECRET_KEY = process.env.APP_SECRET_KEY;
+    // 3. Autentikasi menggunakan SECRET_KEY yang sesuai
     if (secretKey !== APP_SECRET_KEY) {
         return res.status(403).json({ success: false, error: 'Kunci Rahasia salah.' });
     }
 
-    // 3. Validasi input
-    if (!serverName || !ram) {
-        return res.status(400).json({ success: false, error: 'Nama Server dan RAM wajib diisi.' });
+    // 4. Validasi input
+    if (!serverName || !ram || !config.domain || !config.apiKey || !config.eggId) {
+        return res.status(400).json({ 
+            success: false, 
+            error: 'Input tidak lengkap atau Konfigurasi Environment Variable di Vercel belum di-set.' 
+        });
     }
 
     try {
-        // 4. Langkah 1: Buat Pengguna
-        const userResult = await createUser(serverName);
+        // 5. Langkah 1: Buat Pengguna (kirim 'config' yang sudah dipilih)
+        const userResult = await createUser(serverName, config);
         if (!userResult.success) {
             return res.status(500).json(userResult);
         }
@@ -145,10 +161,9 @@ export default async function handler(req, res) {
         const newUser = userResult.user;
         const newUserPassword = userResult.password;
 
-        // 5. Langkah 2: Buat Server
-        const serverResult = await createServer(serverName, ram, newUser.id);
+        // 6. Langkah 2: Buat Server (kirim 'config' yang sudah dipilih)
+        const serverResult = await createServer(serverName, ram, newUser.id, config);
         if (!serverResult.success) {
-            // Jika server gagal dibuat, kita tetap kirim info user agar bisa dicek
             return res.status(500).json({ 
                 success: false, 
                 error: serverResult.error, 
@@ -160,10 +175,10 @@ export default async function handler(req, res) {
 
         const serverInfo = serverResult.data;
 
-        // 6. Kirim respon sukses
+        // 7. Kirim respon sukses
         res.status(201).json({
             success: true,
-            panelUrl: getPterodactylConfig().domain,
+            panelUrl: config.domain, // <-- Kirim domain yang benar
             username: newUser.username,
             email: newUser.email,
             password: newUserPassword,
