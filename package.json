@@ -1,5 +1,5 @@
 {
-  "name": "server-create-simple",
+  "name": "server-create-multi-panel",
   "version": "1.0.0",
   "description": "Pterodactyl server creator",
   "main": "api/create.js",
