@@ -1,216 +1,177 @@
-// Muat variabel .env
-require('dotenv').config();
-// Gunakan 'axios' karena sudah ada di 'package.json' Anda
-const axios = require('axios');
+// --- FUNGSI DARI BOT ANDA (DIMODIFIKASI UNTUK ENV VARS) ---
 
-// 1. AMBIL KONFIGURASI
-const config = {
-    // Config untuk server Private
-    private: {
-        domain: process.env.PTERO_PANEL_URL_PRIVATE,
-        apiKey: process.env.PTERO_API_KEY_PRIVATE,
-        secretKey: process.env.MY_MEMBER_SECRET_KEY // <-- Kunci untuk Private
-    },
-    // Config untuk server Public
-    public: {
-        domain: process.env.PTERO_PANEL_URL_PUBLIC,
-        apiKey: process.env.PTERO_API_KEY_PUBLIC,
-        secretKey: process.env.PUBLIC_MEMBER_SECRET_KEY // <-- Kunci untuk Public
-    },
-    // Pengaturan server (dari .env)
-    shared: {
-        locationId: parseInt(process.env.DEFAULT_LOCATION_ID),
-        nestId: parseInt(process.env.DEFAULT_NEST_ID),
-        eggId: parseInt(process.env.DEFAULT_EGG_ID)
-    }
-};
-
-// --- 2. FUNGSI HELPER (Menggunakan AXIOS dan Error Handling yang Benar) ---
-
-function generatePassword(length = 10) {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    let password = '';
-    for (let i = 0; i < length; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
+// Fungsi ini membaca konfigurasi dari Environment Variables Vercel
+function getPterodactylConfig() {
+    return {
+        domain: process.env.PTERODACTYL_DOMAIN,
+        apiKey: process.env.PTERODACTYL_API_KEY,
+        eggId: parseInt(process.env.PTERODACTYL_EGG_ID, 10),
+        disk: parseInt(process.env.PTERODACTYL_DISK, 10),
+        cpu: parseInt(process.env.PTERODACTYL_CPU, 10),
+        locationId: parseInt(process.env.PTERODACTYL_LOCATION_ID, 10),
+    };
 }
 
-/**
- * Fungsi membuat user (dinamis)
- */
-async function createUser(serverName, pteroConfig) {
-    const username = serverName.toLowerCase().replace(/[^a-z0-9]/g, '') + `_${Math.random().toString(36).substring(2, 6)}`;
-    const email = `${username}@yourdomain.com`; 
-    const password = generatePassword(12);
+async function createUser(serverName) {
+    const pterodactyl = getPterodactylConfig();
+    const url = `${pterodactyl.domain}/api/application/users`;
+    
+    const randomString = Math.random().toString(36).substring(7);
+    const email = `${serverName.toLowerCase().replace(/\s+/g, '')}@${randomString}.com`;
+    const username = `${serverName.toLowerCase().replace(/\s+/g, '')}_${randomString}`;
+    const password = Math.random().toString(36).slice(-10);
 
     const userData = {
         email: email,
         username: username,
-        first_name: "User",
-        last_name: serverName,
+        first_name: serverName,
+        last_name: "User",
         password: password,
-    };
-    
-    const headers = {
-        'Authorization': `Bearer ${pteroConfig.apiKey}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
+        root_admin: false
     };
 
     try {
-        const response = await axios.post(
-            `${pteroConfig.domain}/api/application/users`, 
-            userData,
-            { headers: headers }
-        );
-        return { ...response.data.attributes, password: password };
-    } catch (error) {
-        // PERBAIKAN PENTING: Mengurai error Axios
-        console.error("Gagal membuat user:", error.response ? error.response.data : error.message);
-        if (error.response && error.response.data && error.response.data.errors) {
-            const errorMsg = error.response.data.errors.map(e => e.detail).join(' ');
-            throw new Error(errorMsg); // Lempar error agar ditangkap handler utama
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${pterodactyl.apiKey}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(userData)
+        });
+
+        const data = await response.json();
+
+        if (response.status === 201) {
+            return { success: true, user: data.attributes, password: password };
+        } else {
+            console.error("Gagal membuat user:", JSON.stringify(data.errors, null, 2));
+            return { success: false, error: data.errors ? data.errors[0].detail : 'Gagal membuat pengguna baru.' };
         }
-        throw new Error("Gagal membuat user di panel.");
+    } catch (error) {
+        console.error("Error saat fetch API user:", error);
+        return { success: false, error: 'Gagal terhubung ke API Pterodactyl untuk membuat pengguna.' };
     }
 }
 
-/**
- * Fungsi membuat server (dinamis)
- */
-async function createServer(user, serverName, ram, pteroConfig, sharedConfig) {
-    const memoryLimit = parseInt(ram); 
-    
+async function createServer(serverName, memory, pterodactylUserId) {
+    const pterodactyl = getPterodactylConfig();
+    const url = `${pterodactyl.domain}/api/application/servers`;
+
     const serverData = {
         name: serverName,
-        user: user.id,
-        nest: sharedConfig.nestId,   // <-- Menggunakan config shared
-        egg: sharedConfig.eggId,     // <-- Menggunakan config shared
-        docker_image: "ghcr.io/pterodactyl/yolks:nodejs_18", 
-        startup: "node index.js", 
-        environment: {},
-        limits: {
-            memory: memoryLimit, 
-            swap: 0,
-            disk: (memoryLimit > 0) ? memoryLimit * 3 : 5120, 
-            io: 500,
-            cpu: (memoryLimit > 0) ? (memoryLimit / 1024) * 100 : 400, 
+        user: pterodactylUserId,
+        egg: pterodactyl.eggId,
+        docker_image: "ghcr.io/parkervcp/yolks:nodejs_18",
+        startup: "if [[ -d .git ]]; then git pull; fi; if [[ ! -z ${NODE_PACKAGES} ]]; then /usr/local/bin/npm install ${NODE_PACKAGES}; fi; if [[ -f /home/container/package.json ]]; then /usr/local/bin/npm install; fi; {{CMD_RUN}}",
+        environment: {
+            USER_ID: 1, // Diambil dari Telegram ID, di web kita set default saja
+            CMD_RUN: "node index.js" 
         },
-        feature_limits: { databases: 1, allocations: 1, backups: 1 },
+        limits: {
+            memory: parseInt(memory),
+            swap: 0,
+            disk: pterodactyl.disk,
+            io: 500,
+            cpu: pterodactyl.cpu,
+        },
+        feature_limits: {
+            databases: 1,
+            allocations: 1,
+            backups: 1
+        },
         deploy: {
-            locations: [sharedConfig.locationId], // <-- Menggunakan config shared
+            locations: [pterodactyl.locationId],
             dedicated_ip: false,
-            port_range: [],
+            port_range: []
         }
-    };
-
-    const headers = {
-        'Authorization': `Bearer ${pteroConfig.apiKey}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
     };
 
     try {
-        const response = await axios.post(
-            `${pteroConfig.domain}/api/application/servers`, 
-            serverData,
-            { headers: headers }
-        );
-        return response.data.attributes;
-    } catch (error) {
-        // PERBAIKAN PENTING: Mengurai error Axios
-        console.error("Gagal membuat server:", error.response ? error.response.data.errors : error.message);
-        if (error.response && error.response.data && error.response.data.errors) {
-            const errorMsg = error.response.data.errors.map(e => e.detail).join(' ');
-            throw new Error(errorMsg); // Lempar error agar ditangkap handler utama
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${pterodactyl.apiKey}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(serverData)
+        });
+
+        const data = await response.json();
+
+        if (response.status === 201) {
+            return { success: true, data: data.attributes };
+        } else {
+            console.error("Error Pterodactyl API Server:", JSON.stringify(data.errors, null, 2));
+            return { success: false, error: data.errors ? data.errors[0].detail : 'Gagal membuat server.' };
         }
-        throw new Error("Gagal membuat server di panel.");
+    } catch (error) {
+        console.error("Error saat fetch API Server:", error);
+        return { success: false, error: 'Gagal terhubung ke Pterodactyl API untuk membuat server.' };
     }
 }
 
-// --- 3. HANDLER UTAMA (Ini bagian terpenting) ---
+
+// --- API HANDLER UTAMA ---
+// Vercel akan otomatis membaca 'export default' ini
 export default async function handler(req, res) {
-
-    // --- LOG DEBUG BARU ---
-    console.log("LOG DEBUG: Menjalankan handler create.js versi BARU (dengan perbaikan JSON).");
-    // --- BATAS LOG DEBUG ---
-
-    // Setel Header CORS
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*'); 
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-    // Tangani request OPTIONS
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    
+    // 1. Hanya izinkan metode POST
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Metode tidak diizinkan' });
+        return res.status(405).json({ success: false, error: 'Metode tidak diizinkan' });
     }
 
-    // Gunakan 'panelType' agar cocok dengan frontend
-    const { serverName, ram, secretKey, panelType } = req.body;
-    let targetConfig;
+    const { serverName, ram, secretKey } = req.body;
+    
+    // 2. Autentikasi: Ganti 'authorizedUserId' dengan kunci rahasia dari env
+    const APP_SECRET_KEY = process.env.APP_SECRET_KEY;
+    if (secretKey !== APP_SECRET_KEY) {
+        return res.status(403).json({ success: false, error: 'Kunci Rahasia salah.' });
+    }
+
+    // 3. Validasi input
+    if (!serverName || !ram) {
+        return res.status(400).json({ success: false, error: 'Nama Server dan RAM wajib diisi.' });
+    }
 
     try {
-        // Validasi input
-        if (!serverName || ram === undefined || ram === null || !panelType || !secretKey) {
-             return res.status(400).json({ error: 'Data tidak lengkap: Nama Server, RAM, Tipe Panel, dan Secret Key wajib diisi.' });
+        // 4. Langkah 1: Buat Pengguna
+        const userResult = await createUser(serverName);
+        if (!userResult.success) {
+            return res.status(500).json(userResult);
         }
 
-        // --- LOGIKA UTAMA (Ini yang Anda inginkan) ---
-        if (panelType === 'private') {
-            if (secretKey !== config.private.secretKey) {
-                return res.status(403).json({ error: 'Secret Key untuk Panel Private salah.' });
-            }
-            targetConfig = config.private;
+        const newUser = userResult.user;
+        const newUserPassword = userResult.password;
 
-        } else if (panelType === 'public') {
-            if (secretKey !== config.public.secretKey) {
-                 return res.status(403).json({ error: 'Secret Key untuk Panel Public salah.' });
-            }
-            targetConfig = config.public;
-            
-        } else {
-            return res.status(400).json({ error: 'Tipe panel tidak dikenal.' });
+        // 5. Langkah 2: Buat Server
+        const serverResult = await createServer(serverName, ram, newUser.id);
+        if (!serverResult.success) {
+            // Jika server gagal dibuat, kita tetap kirim info user agar bisa dicek
+            return res.status(500).json({ 
+                success: false, 
+                error: serverResult.error, 
+                detail: "Server gagal dibuat, tapi akun panel mungkin sudah dibuat.",
+                user: newUser,
+                password: newUserPassword
+            });
         }
 
-        // Cek jika .env ada isinya
-        if (!targetConfig.domain || !targetConfig.apiKey || !targetConfig.secretKey) {
-             console.error(`Konfigurasi .env untuk '${panelType}' tidak lengkap.`);
-             return res.status(500).json({ error: 'Kesalahan konfigurasi server.' });
-        }
-        // ===========================================
+        const serverInfo = serverResult.data;
 
-        // --- Proses Pembuatan ---
-        const newUser = await createUser(serverName, targetConfig);
-        const newServer = await createServer(newUser, serverName, ram, targetConfig, config.shared);
-        
-        // Kirim Respon Sukses (JSON)
-        return res.status(201).json({
-            message: 'Server dan User berhasil dibuat!',
-            panelURL: targetConfig.domain, // <-- Mengirim domain yang benar
-            user: { id: newUser.id, username: newUser.username, email: newUser.email },
-            password: newUser.password,
-            server: { id: newServer.id, uuid: newServer.uuid, name: newServer.name, limits: newServer.limits }
+        // 6. Kirim respon sukses
+        res.status(201).json({
+            success: true,
+            panelUrl: getPterodactylConfig().domain,
+            username: newUser.username,
+            email: newUser.email,
+            password: newUserPassword,
+            serverName: serverInfo.name,
+            serverRam: serverInfo.limits.memory
         });
 
     } catch (error) {
-        // --- INI ADALAH PERBAIKAN ERROR JSON ANDA ---
-        console.error("Handler Error:", error.message);
-        
-        // Kirim error Pterodactyl (seperti "nama sudah ada") sebagai 409 Conflict
-        if (error.message.toLowerCase().includes("a server with this name already exists")) {
-             return res.status(409).json({ error: "Nama server tersebut sudah dipakai." });
-        }
-        if (error.message.toLowerCase().includes("email has already been taken")) {
-             return res.status(409).json({ error: "Terjadi konflik, nama user/email mungkin sudah ada." });
-        }
-        
-        // Ini adalah penangkap error default
-        return res.status(500).json({ error: error.message || 'Terjadi kesalahan internal server.' });
+        res.status(500).json({ success: false, error: 'Terjadi kesalahan internal: ' + error.message });
     }
 }
