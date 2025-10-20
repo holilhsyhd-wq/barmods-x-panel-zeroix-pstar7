@@ -1,6 +1,5 @@
 // Muat variabel .env
 require('dotenv').config();
-
 const axios = require('axios');
 
 // --- Ambil KEDUA set kredensial panel ---
@@ -11,14 +10,14 @@ const PTERO_API_KEY_PUBLIC = process.env.PTERO_API_KEY_PUBLIC;
 
 // --- Ambil KEDUA secret key ---
 const MY_MEMBER_SECRET_KEY = process.env.MY_MEMBER_SECRET_KEY;
-const PUBLIC_MEMBER_SECRET_KEY = process.env.PUBLIC_MEMBER_SECRET_KEY; // <-- INI PENTING
+const PUBLIC_MEMBER_SECRET_KEY = process.env.PUBLIC_MEMBER_SECRET_KEY; 
 
 // Konfigurasi server default (diambil dari .env)
 const DEFAULT_LOCATION_ID = parseInt(process.env.DEFAULT_LOCATION_ID);
 const DEFAULT_NEST_ID = parseInt(process.env.DEFAULT_NEST_ID);
 const DEFAULT_EGG_ID = parseInt(process.env.DEFAULT_EGG_ID);
 
-// --- Fungsi Helper (sekarang menerima panelUrl dan apiKey) ---
+// --- Fungsi Helper ---
 
 function generatePassword(length = 10) {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
@@ -34,7 +33,7 @@ function generatePassword(length = 10) {
  */
 async function createUser(serverName, panelUrl, apiKey) {
     const username = serverName.toLowerCase().replace(/[^a-z0-9]/g, '') + `_${Math.random().toString(36).substring(2, 6)}`;
-    const email = `${username}@yourdomain.com`; // Ganti @yourdomain.com jika perlu
+    const email = `${username}@yourdomain.com`; 
     const password = generatePassword(12);
 
     const userData = {
@@ -60,6 +59,11 @@ async function createUser(serverName, panelUrl, apiKey) {
         return { ...response.data.attributes, password: password };
     } catch (error) {
         console.error("Gagal membuat user:", error.response ? error.response.data : error.message);
+        // PERBAIKAN: Ambil error spesifik dari Pterodactyl
+        if (error.response && error.response.data && error.response.data.errors) {
+            const errorMsg = error.response.data.errors.map(e => e.detail).join(' ');
+            throw new Error(errorMsg); // e.g., "Email has already been taken."
+        }
         throw new Error("Gagal membuat user di panel.");
     }
 }
@@ -68,9 +72,7 @@ async function createUser(serverName, panelUrl, apiKey) {
  * Fungsi membuat server (sekarang dinamis)
  */
 async function createServer(user, serverName, ram, panelUrl, apiKey) {
-    
     const memoryLimit = parseInt(ram); 
-    
     const serverData = {
         name: serverName,
         user: user.id,
@@ -109,9 +111,10 @@ async function createServer(user, serverName, ram, panelUrl, apiKey) {
         return response.data.attributes;
     } catch (error) {
         console.error("Gagal membuat server:", error.response ? error.response.data.errors : error.message);
-        if (error.response && error.response.data.errors) {
+        // PERBAIKAN: Ambil error spesifik dari Pterodactyl
+        if (error.response && error.response.data && error.response.data.errors) {
             const errorMsg = error.response.data.errors.map(e => e.detail).join(' ');
-            throw new Error(`Gagal membuat server: ${errorMsg}`);
+            throw new Error(errorMsg); // e.g., "A server with this name already exists."
         }
         throw new Error("Gagal membuat server di panel.");
     }
@@ -132,37 +135,32 @@ export default async function handler(req, res) {
     }
     
     if (req.method !== 'POST') {
+        // PERBAIKAN: Selalu kirim JSON
         return res.status(405).json({ error: 'Metode tidak diizinkan' });
     }
 
     const { serverName, ram, secretKey, panelType } = req.body;
-
     let targetPanelUrl = '';
     let targetApiKey = '';
 
     try {
-        // Validasi input (SEKARANG SECRET KEY JUGA WAJIB)
+        // Validasi input
         if (!serverName || ram === undefined || ram === null || !panelType || !secretKey) {
              return res.status(400).json({ error: 'Data tidak lengkap: Nama Server, RAM, Tipe Panel, dan Secret Key wajib diisi.' });
         }
 
-        // --- LOGIKA UTAMA (BERUBAH) ---
-        
+        // --- LOGIKA UTAMA (Sudah benar) ---
         if (panelType === 'private') {
-            // 1. Validasi Secret Key untuk Private
             if (secretKey !== MY_MEMBER_SECRET_KEY) {
                 return res.status(403).json({ error: 'Secret Key untuk Panel Private salah.' });
             }
-            // 2. Set kredensial ke panel PRIVATE
             targetPanelUrl = PTERO_PANEL_URL_PRIVATE;
             targetApiKey = PTERO_API_KEY_PRIVATE;
 
         } else if (panelType === 'public') {
-            // 1. Validasi Secret Key untuk Public (INI PERUBAHANNYA)
             if (secretKey !== PUBLIC_MEMBER_SECRET_KEY) {
                  return res.status(403).json({ error: 'Secret Key untuk Panel Public salah.' });
             }
-            // 2. Set kredensial ke panel PUBLIC
             targetPanelUrl = PTERO_PANEL_URL_PUBLIC;
             targetApiKey = PTERO_API_KEY_PUBLIC;
             
@@ -171,7 +169,7 @@ export default async function handler(req, res) {
         }
 
         // Cek jika kredensial panel ada
-        if (!targetPanelUrl || !targetApiKey || !PUBLIC_MEMBER_SECRET_KEY) {
+        if (!targetPanelUrl || !targetApiKey || !MY_MEMBER_SECRET_KEY || !PUBLIC_MEMBER_SECRET_KEY) {
             console.error("Kesalahan Konfigurasi: Pastikan semua URL, API Key, dan Secret Key (Private & Public) diatur di .env");
             return res.status(500).json({ error: 'Kesalahan konfigurasi server.' });
         }
@@ -180,26 +178,25 @@ export default async function handler(req, res) {
         const newUser = await createUser(serverName, targetPanelUrl, targetApiKey);
         const newServer = await createServer(newUser, serverName, ram, targetPanelUrl, targetApiKey);
         
-        // Kirim Respon Sukses
+        // Kirim Respon Sukses (JSON)
         return res.status(201).json({
             message: 'Server dan User berhasil dibuat!',
             panelURL: targetPanelUrl, 
-            user: {
-                id: newUser.id,
-                username: newUser.username,
-                email: newUser.email,
-            },
+            user: { id: newUser.id, username: newUser.username, email: newUser.email },
             password: newUser.password,
-            server: {
-                id: newServer.id,
-                uuid: newServer.uuid,
-                name: newServer.name,
-                limits: newServer.limits
-            }
+            server: { id: newServer.id, uuid: newServer.uuid, name: newServer.name, limits: newServer.limits }
         });
 
     } catch (error) {
-        // Tangani Error
+        // --- PERBAIKAN: Blok penangkap error utama ---
+        console.error("Handler Error:", error.message);
+        
+        // Kirim error Pterodactyl (seperti "nama sudah ada") sebagai 409 Conflict
+        if (error.message.toLowerCase().includes("a server with this name already exists")) {
+             return res.status(409).json({ error: "Nama server tersebut sudah dipakai." });
+        }
+        
+        // Kirim error spesifik lainnya
         return res.status(500).json({ error: error.message || 'Terjadi kesalahan internal server.' });
     }
 }
