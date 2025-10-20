@@ -1,320 +1,101 @@
-/* --- Global & Body --- */
 body {
-    font-family: 'Poppins', sans-serif;
-    background-color: #0c0a1e; /* Warna dasar ungu/biru tua */
-    color: #ffffff;
+    font-family: Arial, sans-serif;
+    background: #f9f9f9;
     margin: 0;
     padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    overflow-x: hidden; /* Mencegah horizontal scroll */
-    padding-top: 100px; /* Kasih ruang untuk header */
-    padding-bottom: 40px;
 }
 
-/* --- Efek Background Bintang --- */
-@keyframes move-twink-back {
-    from {background-position: 0 0;}
-    to {background-position: -10000px 5000px;}
-}
-
-.stars, .twinkling {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    z-index: -2;
-}
-
-.stars {
-    background: #000 url(https://www.script-tutorials.com/demos/360/images/stars.png) repeat top center;
-}
-
-.twinkling {
-    background: transparent url(https://www.script-tutorials.com/demos/360/images/twinkling.png) repeat top center;
-    animation: move-twink-back 200s linear infinite;
-    z-index: -1;
-}
-
-/* --- Header Baru (sesuai foto) --- */
-.main-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 60px;
-    background-color: rgba(18, 15, 38, 0.8);
-    backdrop-filter: blur(10px);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 20px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    z-index: 100;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    box-sizing: border-box;
-}
-.main-header .logo {
-    font-weight: 700;
-    font-size: 1.2em;
-    color: #00ff7f; /* Warna aksen */
-}
-.main-header .header-title {
-    font-weight: 600;
-    font-size: 1.1em;
-    color: #ffffff;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-}
-.main-header .profile-icon {
-    font-size: 1.5em;
-    color: #ffffff;
-    cursor: pointer;
-}
-
-/* --- Jam Realtime --- */
-#realtime-clock {
-    position: fixed;
-    top: 75px; /* Di bawah header */
-    right: 20px;
-    background: rgba(0, 0, 0, 0.3);
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 0.9em;
-    z-index: 50;
-}
-
-/* --- Kontainer Utama --- */
 .container {
-    width: 90%;
-    max-width: 450px;
-    padding: 30px;
-    background-color: rgba(28, 25, 50, 0.85); /* Lebih gelap */
-    border-radius: 15px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(5px);
-    z-index: 10;
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background: white;
 }
 
-/* --- Form --- */
-form {
+h1 {
+    text-align: center;
+}
+
+.form {
     display: flex;
     flex-direction: column;
-    gap: 15px; /* Jarak antar elemen form */
+    gap: 15px;
 }
 
-form label { /* Label di luar input */
-    font-weight: 600;
-    margin-bottom: -10px; /* Dekatkan ke input */
-    font-size: 0.95em;
+.form div {
+    display: flex;
+    flex-direction: column;
 }
 
-/* Style Input Teks, Password, dan Select */
+label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
 input[type="text"],
 input[type="password"],
 select {
-    width: 100%;
-    padding: 14px 18px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background-color: rgba(0, 0, 0, 0.3);
-    color: #ffffff;
-    font-size: 1em;
-    box-sizing: border-box; /* Penting untuk padding */
-    transition: all 0.3s ease;
-    font-family: 'Poppins', sans-serif;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box; /* Menambahkan ini agar padding tidak merusak layout */
 }
 
-input[type="text"]::placeholder,
-input[type="password"]::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-}
-
-input[type="text"]:focus,
-input[type="password"]:focus,
-select:focus {
-    outline: none;
-    border-color: #00ff7f;
-    box-shadow: 0 0 10px rgba(0, 255, 127, 0.3);
-}
-
-/* Style untuk Select (Dropdown) */
-select {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url('data:image/svg+xml;utf8,<svg fill="white" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
-    background-repeat: no-repeat;
-    background-position-x: 97%;
-    background-position-y: 50%;
-    padding-right: 40px; /* Ruang untuk panah */
-}
-
-select option {
-    background-color: #1c1932;
-    color: #ffffff;
-}
-select option[disabled] {
-    color: #888;
-}
-
-/* --- Tipe Server (Style Tab Baru) --- */
-.server-type-options {
-    display: flex;
-    width: 100%;
-    background-color: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.server-type-options input[type="radio"] {
-    display: none; /* Sembunyikan radio button asli */
-}
-
-.server-type-options label {
-    flex: 1; /* Bagi rata */
-    text-align: center;
-    padding: 12px 10px;
-    cursor: pointer;
-    color: rgba(255, 255, 255, 0.6);
-    transition: all 0.3s ease;
-    margin: 0;
-    font-weight: 600;
-    font-size: 1em;
-}
-
-/* Efek saat radio dipilih */
-.server-type-options input[type="radio"]:checked + label {
-    background-color: #00ff7f;
-    color: #0c0a1e;
-    box-shadow: 0 0 10px rgba(0, 255, 127, 0.5);
-}
-
-/* --- Container Secret Key (Baru) --- */
-#secretKeyContainer {
-    display: block;
-    transition: all 0.3s ease;
-}
-#secretKeyContainer small {
-    display: block;
-    margin-top: 8px;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 0.85em;
-    line-height: 1.4;
-}
-
-/* --- Tombol Submit (Style Baru) --- */
-button[type="submit"] {
-    background-image: linear-gradient(90deg, #00ff7f, #00c864);
-    color: #0c0a1e;
-    border: none;
-    padding: 15px;
-    border-radius: 10px;
-    font-size: 1.1em;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    margin-top: 10px;
-    font-family: 'Poppins', sans-serif;
-}
-
-button[type="submit"]:hover:not(:disabled) {
-    box-shadow: 0 0 15px rgba(0, 255, 127, 0.6);
-    transform: translateY(-2px);
-}
-
-button[type="submit"]:disabled {
-    background: #555;
-    color: #999;
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-}
-
-/* --- Hasil / Result Box --- */
-#result {
-    margin-top: 25px;
-    padding: 18px;
-    border-radius: 10px;
-    text-align: left;
-    font-size: 0.95em;
-    line-height: 1.6;
-    display: none; /* Sembunyi sampai ada hasil */
-}
-#result:not(:empty) {
-    display: block; /* Tampilkan jika ada isi */
-}
-
-/* Info (Loading) */
-#result:not(.success):not(.error) {
-    background-color: rgba(50, 150, 255, 0.2);
-    border: 1px solid #3296ff;
-    color: #d4eaff;
-}
-
-/* Sukses */
-#result.success {
-    background-color: rgba(0, 255, 127, 0.1);
-    border: 1px solid #00ff7f;
-    color: #d1ffeb;
-}
-#result.success h4 {
-    margin-top: 0;
-    color: #00ff7f;
-    font-size: 1.1em;
-}
-#result.success p {
-    margin: 5px 0;
-}
-#result.success hr {
-    border: none;
-    height: 1px;
-    background-color: rgba(0, 255, 127, 0.3);
-    margin: 10px 0;
-}
-#result.success strong {
-    color: #f0f0f0;
-}
-
-/* Error */
-#result.error {
-    background-color: rgba(255, 87, 87, 0.2);
-    border: 1px solid #ff5757;
-    color: #ffeaea;
-    font-weight: 600;
-}
-
-/* --- Tombol WhatsApp --- */
-.whatsapp-fab {
-    position: fixed;
-    bottom: 25px;
-    right: 25px;
-    left: auto;
-    width: 60px;
-    height: 60px;
-    background-color: #25D366;
+button {
+    padding: 12px;
+    background-color: #0070f3;
     color: white;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 2.5em;
-    text-decoration: none;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    z-index: 100;
-    transition: all 0.3s ease;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-.whatsapp-fab:hover {
-    transform: scale(1.1) translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+button:hover {
+    background-color: #005bb5;
 }
 
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.result {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    display: none; /* Sembunyikan secara default */
+    line-height: 1.6;
+}
+
+/* Kelas ini akan ditambahkan oleh JavaScript */
+.result-success {
+    display: block;
+    background-color: #e6ffed;
+    border: 1px solid #b7e1c8;
+}
+
+.result-error {
+    display: block;
+    background-color: #ffebe6;
+    border: 1px solid #e1b7b7;
+    color: #c00;
+}
+
+pre {
+    font-family: monospace;
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background: #f4f4f4;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto; /* Agar bisa scroll jika teksnya panjang */
+}
