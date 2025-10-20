@@ -132,6 +132,10 @@ async function createServer(user, serverName, ram, pteroConfig, sharedConfig) {
 // --- 3. HANDLER UTAMA (Ini bagian terpenting) ---
 export default async function handler(req, res) {
 
+    // --- LOG DEBUG BARU ---
+    console.log("LOG DEBUG: Menjalankan handler create.js versi BARU (dengan perbaikan JSON).");
+    // --- BATAS LOG DEBUG ---
+
     // Setel Header CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*'); 
