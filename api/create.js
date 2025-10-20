@@ -11,7 +11,7 @@ const PTERO_API_KEY_PUBLIC = process.env.PTERO_API_KEY_PUBLIC;
 
 // --- Ambil KEDUA secret key ---
 const MY_MEMBER_SECRET_KEY = process.env.MY_MEMBER_SECRET_KEY;
-const PUBLIC_MEMBER_SECRET_KEY = process.env.PUBLIC_MEMBER_SECRET_KEY;
+const PUBLIC_MEMBER_SECRET_KEY = process.env.PUBLIC_MEMBER_SECRET_KEY; // <-- INI PENTING
 
 // Konfigurasi server default (diambil dari .env)
 const DEFAULT_LOCATION_ID = parseInt(process.env.DEFAULT_LOCATION_ID);
@@ -31,8 +31,6 @@ function generatePassword(length = 10) {
 
 /**
  * Fungsi membuat user (sekarang dinamis)
- * @param {string} panelUrl - URL panel target
- * @param {string} apiKey - API Key panel target
  */
 async function createUser(serverName, panelUrl, apiKey) {
     const username = serverName.toLowerCase().replace(/[^a-z0-9]/g, '') + `_${Math.random().toString(36).substring(2, 6)}`;
@@ -47,7 +45,6 @@ async function createUser(serverName, panelUrl, apiKey) {
         password: password,
     };
     
-    // Buat header dinamis
     const headers = {
         'Authorization': `Bearer ${apiKey}`,
         'Accept': 'application/json',
@@ -56,7 +53,7 @@ async function createUser(serverName, panelUrl, apiKey) {
 
     try {
         const response = await axios.post(
-            `${panelUrl}/api/application/users`, // URL dinamis
+            `${panelUrl}/api/application/users`, 
             userData,
             { headers: headers }
         );
@@ -69,12 +66,9 @@ async function createUser(serverName, panelUrl, apiKey) {
 
 /**
  * Fungsi membuat server (sekarang dinamis)
- * @param {string} panelUrl - URL panel target
- * @param {string} apiKey - API Key panel target
  */
 async function createServer(user, serverName, ram, panelUrl, apiKey) {
     
-    // Konversi ram 0 (unlimited) ke 0.
     const memoryLimit = parseInt(ram); 
     
     const serverData = {
@@ -82,15 +76,15 @@ async function createServer(user, serverName, ram, panelUrl, apiKey) {
         user: user.id,
         nest: DEFAULT_NEST_ID,
         egg: DEFAULT_EGG_ID,
-        docker_image: "ghcr.io/pterodactyl/yolks:nodejs_18", // Sesuaikan jika perlu
-        startup: "node index.js", // Sesuaikan jika perlu
+        docker_image: "ghcr.io/pterodactyl/yolks:nodejs_18", 
+        startup: "node index.js", 
         environment: {},
         limits: {
-            memory: memoryLimit, // 0 berarti unlimited
+            memory: memoryLimit, 
             swap: 0,
-            disk: (memoryLimit > 0) ? memoryLimit * 3 : 5120, // Disk 3x RAM, atau 5GB jika unlimited (0)
+            disk: (memoryLimit > 0) ? memoryLimit * 3 : 5120, 
             io: 500,
-            cpu: (memoryLimit > 0) ? (memoryLimit / 1024) * 100 : 400, // 100% CPU per 1GB RAM, atau 400% jika unlimited (0)
+            cpu: (memoryLimit > 0) ? (memoryLimit / 1024) * 100 : 400, 
         },
         feature_limits: { databases: 1, allocations: 1, backups: 1 },
         deploy: {
@@ -100,7 +94,6 @@ async function createServer(user, serverName, ram, panelUrl, apiKey) {
         }
     };
 
-    // Buat header dinamis
     const headers = {
         'Authorization': `Bearer ${apiKey}`,
         'Accept': 'application/json',
@@ -109,7 +102,7 @@ async function createServer(user, serverName, ram, panelUrl, apiKey) {
 
     try {
         const response = await axios.post(
-            `${panelUrl}/api/application/servers`, // URL dinamis
+            `${panelUrl}/api/application/servers`, 
             serverData,
             { headers: headers }
         );
@@ -127,45 +120,33 @@ async function createServer(user, serverName, ram, panelUrl, apiKey) {
 // --- Handler Utama Serverless Function ---
 export default async function handler(req, res) {
 
-    // Setel Header CORS (Wajib untuk Vercel)
+    // Setel Header CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
-    // Ganti '*' dengan domain Vercel Anda setelah deploy untuk keamanan lebih
     res.setHeader('Access-Control-Allow-Origin', '*'); 
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Tangani request OPTIONS (pre-flight)
+    // Tangani request OPTIONS
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
     
-    // Hanya izinkan metode POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Metode tidak diizinkan' });
     }
 
-    // Ambil data dari body (sekarang 'panelType')
     const { serverName, ram, secretKey, panelType } = req.body;
 
-    // Variabel untuk menyimpan kredensial panel yang akan digunakan
     let targetPanelUrl = '';
     let targetApiKey = '';
 
     try {
-        // Validasi input
-        // Cek 'ram' secara spesifik karena 0 adalah nilai valid (unlimited)
-        if (!serverName || ram === undefined || ram === null || !panelType) {
-             return res.status(400).json({ error: 'Data tidak lengkap: Nama Server, RAM, dan Tipe Panel wajib diisi.' });
-        }
-        
-        // Validasi secretKey hanya jika diperlukan
-        if (panelType === 'private' && !secretKey) {
-            return res.status(400).json({ error: 'Secret Key wajib diisi untuk Panel Private.' });
+        // Validasi input (SEKARANG SECRET KEY JUGA WAJIB)
+        if (!serverName || ram === undefined || ram === null || !panelType || !secretKey) {
+             return res.status(400).json({ error: 'Data tidak lengkap: Nama Server, RAM, Tipe Panel, dan Secret Key wajib diisi.' });
         }
 
-
-        // --- LOGIKA UTAMA ---
-        // Tentukan panel mana yang akan digunakan berdasarkan 'panelType'
+        // --- LOGIKA UTAMA (BERUBAH) ---
         
         if (panelType === 'private') {
             // 1. Validasi Secret Key untuk Private
@@ -177,15 +158,10 @@ export default async function handler(req, res) {
             targetApiKey = PTERO_API_KEY_PRIVATE;
 
         } else if (panelType === 'public') {
-            // 1. Validasi Secret Key untuk Public
-            // (Kita asumsikan public tidak butuh secret key, jadi kita gunakan Punya Public)
-            // Jika public JUGA butuh secret key, gunakan validasi di bawah:
-            /*
+            // 1. Validasi Secret Key untuk Public (INI PERUBAHANNYA)
             if (secretKey !== PUBLIC_MEMBER_SECRET_KEY) {
                  return res.status(403).json({ error: 'Secret Key untuk Panel Public salah.' });
             }
-            */
-            
             // 2. Set kredensial ke panel PUBLIC
             targetPanelUrl = PTERO_PANEL_URL_PUBLIC;
             targetApiKey = PTERO_API_KEY_PUBLIC;
@@ -195,8 +171,8 @@ export default async function handler(req, res) {
         }
 
         // Cek jika kredensial panel ada
-        if (!targetPanelUrl || !targetApiKey) {
-            console.error("Kesalahan Konfigurasi: URL atau API Key panel tidak diatur di .env");
+        if (!targetPanelUrl || !targetApiKey || !PUBLIC_MEMBER_SECRET_KEY) {
+            console.error("Kesalahan Konfigurasi: Pastikan semua URL, API Key, dan Secret Key (Private & Public) diatur di .env");
             return res.status(500).json({ error: 'Kesalahan konfigurasi server.' });
         }
 
@@ -207,7 +183,7 @@ export default async function handler(req, res) {
         // Kirim Respon Sukses
         return res.status(201).json({
             message: 'Server dan User berhasil dibuat!',
-            panelURL: targetPanelUrl, // Kirim URL panel yang benar
+            panelURL: targetPanelUrl, 
             user: {
                 id: newUser.id,
                 username: newUser.username,
