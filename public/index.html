@@ -53,7 +53,7 @@
         <div id="result"></div>
     </div>
 
-    <a href="https://wa.me/6285161603561" class="whatsapp-fab" target="_blank" aria-label="Chat on WhatsApp">
+    <a href="https://wa.me/6283877842721" class="whatsapp-fab" target="_blank" aria-label="Chat on WhatsApp">
         <i class="fab fa-whatsapp"></i>
     </a>
     
@@ -66,14 +66,14 @@
         const panelTypeRadios = document.querySelectorAll('input[name="panelType"]');
         const secretKeyContainer = document.getElementById('secretKeyContainer');
         const secretKeyInput = document.getElementById('secretKey');
-        const secretKeyHelpText = document.getElementById('secretKeyHelpText'); // <-- Elemen baru
+        const secretKeyHelpText = document.getElementById('secretKeyHelpText'); 
         const submitButton = document.getElementById('submitButton');
         const form = document.getElementById('createServerForm');
         const ramSelect = document.getElementById('ram');
         const resultDiv = document.getElementById('result');
 
         // --- Opsi RAM ---
-        const newRamOptions = [
+        const ramOptions = [
             { value: "1024", text: "1 GB (1024 MB)" },
             { value: "2048", text: "2 GB (2048 MB)" },
             { value: "3072", text: "3 GB (3072 MB)" },
@@ -85,32 +85,28 @@
             { value: "9216", text: "9 GB (9216 MB)" },
             { value: "0",    text: "10 GB (Unlimited)" } 
         ];
-        const ramOptions = { private: newRamOptions, public: newRamOptions };
 
         // --- Fungsi untuk update pilihan RAM ---
-        function updateRamOptions(type) {
-            const options = ramOptions[type];
+        function updateRamOptions() {
             const currentValue = ramSelect.value;
             ramSelect.innerHTML = '<option value="" disabled>-- Pilih Ukuran RAM --</option>'; 
-            options.forEach(opt => {
+            ramOptions.forEach(opt => {
                 const optionEl = document.createElement('option');
                 optionEl.value = opt.value;
                 optionEl.textContent = opt.text;
                 ramSelect.appendChild(optionEl);
             });
-            if (options.some(opt => opt.value === currentValue)) {
+            if (ramOptions.some(opt => opt.value === currentValue)) {
                 ramSelect.value = currentValue;
             } else {
                 ramSelect.value = ""; 
             }
         }
 
-        // --- FUNGSI UTAMA YANG BERUBAH ---
+        // --- Fungsi untuk ganti tampilan form ---
         function togglePanelType() {
             const selectedType = document.querySelector('input[name="panelType"]:checked').value;
             
-            // Selalu tampilkan kontainer dan wajibkan input
-            secretKeyContainer.style.display = 'block';
             secretKeyInput.required = true;
             secretKeyInput.value = ''; // Kosongkan nilainya saat ganti
 
@@ -123,22 +119,22 @@
                 secretKeyHelpText.innerText = 'Dapatkan Secret Key Public dari administrator.';
                 submitButton.innerText = 'Buat Server Publik';
             }
-            
-            updateRamOptions(selectedType);
         }
 
         // Tambahkan event listener ke radio buttons
         panelTypeRadios.forEach(radio => radio.addEventListener('change', togglePanelType));
         
-        // Panggil sekali saat halaman dimuat
+        // Panggil fungsi saat halaman dimuat
         togglePanelType();
+        updateRamOptions();
 
-        // --- Logika Submit Form (Tidak berubah) ---
+        // --- Logika Submit Form ---
         form.addEventListener('submit', async function(event) {
             event.preventDefault();
             submitButton.disabled = true;
             resultDiv.className = '';
             resultDiv.innerText = '⏳ Membuat server, mohon tunggu...';
+            
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
             data.ram = parseInt(data.ram, 10);
@@ -149,10 +145,15 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data),
                 });
+                
+                // INI PERBAIKANNYA: Selalu baca response.json()
                 const responseData = await response.json();
+
                 if (!response.ok) {
+                    // Ambil pesan error dari JSON
                     throw new Error(responseData.error || 'Terjadi kesalahan');
                 }
+                
                 resultDiv.className = 'success';
                 resultDiv.innerHTML = `
                     <h4>✅ Semua Berhasil Disiapkan!</h4>
@@ -165,6 +166,7 @@
                 `;
                 form.reset();
                 togglePanelType(); 
+                updateRamOptions();
             } catch (error) {
                 resultDiv.className = 'error';
                 resultDiv.innerText = `❌ Gagal: ${error.message}`;
@@ -173,7 +175,7 @@
             }
         });
 
-        // --- Logika Jam (Tidak berubah) ---
+        // --- Logika Jam ---
         function updateClock() {
             const clockElement = document.getElementById('clock-time');
             if (clockElement) {
