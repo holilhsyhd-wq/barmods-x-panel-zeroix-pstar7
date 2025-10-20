@@ -43,8 +43,8 @@
 
             <div id="secretKeyContainer">
                 <label for="secretKey">Secret Key:</label>
-                <input type="password" id="secretKey" name="secretKey" placeholder="Masukkan Secret Anda">
-                <small>Khusus anggota Zeroix. Dapatkan di zeroix.id/zeroix/key</small>
+                <input type="password" id="secretKey" name="secretKey" placeholder="Masukkan Secret Key Private" required>
+                <small id="secretKeyHelpText">Khusus anggota Zeroix. Dapatkan di zeroix.id/zeroix/key</small>
             </div>
             
             <button type="submit" id="submitButton">Buat Server</button>
@@ -66,12 +66,13 @@
         const panelTypeRadios = document.querySelectorAll('input[name="panelType"]');
         const secretKeyContainer = document.getElementById('secretKeyContainer');
         const secretKeyInput = document.getElementById('secretKey');
+        const secretKeyHelpText = document.getElementById('secretKeyHelpText'); // <-- Elemen baru
         const submitButton = document.getElementById('submitButton');
         const form = document.getElementById('createServerForm');
         const ramSelect = document.getElementById('ram');
         const resultDiv = document.getElementById('result');
 
-        // --- Opsi RAM (sesuai permintaan baru 1-9GB, 10=Unlimited) ---
+        // --- Opsi RAM ---
         const newRamOptions = [
             { value: "1024", text: "1 GB (1024 MB)" },
             { value: "2048", text: "2 GB (2048 MB)" },
@@ -82,29 +83,21 @@
             { value: "7168", text: "7 GB (7168 MB)" },
             { value: "8192", text: "8 GB (8192 MB)" },
             { value: "9216", text: "9 GB (9216 MB)" },
-            { value: "0",    text: "10 GB (Unlimited)" } // Nilai "0" berarti unlimited
+            { value: "0",    text: "10 GB (Unlimited)" } 
         ];
-
-        const ramOptions = {
-            private: newRamOptions,
-            public: newRamOptions // Sekarang opsi Private dan Public SAMA
-        };
+        const ramOptions = { private: newRamOptions, public: newRamOptions };
 
         // --- Fungsi untuk update pilihan RAM ---
         function updateRamOptions(type) {
             const options = ramOptions[type];
             const currentValue = ramSelect.value;
-            
-            ramSelect.innerHTML = '<option value="" disabled>-- Pilih Ukuran RAM --</option>'; // Reset
-
+            ramSelect.innerHTML = '<option value="" disabled>-- Pilih Ukuran RAM --</option>'; 
             options.forEach(opt => {
                 const optionEl = document.createElement('option');
                 optionEl.value = opt.value;
                 optionEl.textContent = opt.text;
                 ramSelect.appendChild(optionEl);
             });
-
-            // Setel ulang nilai sebelumnya jika masih valid, jika tidak, reset
             if (options.some(opt => opt.value === currentValue)) {
                 ramSelect.value = currentValue;
             } else {
@@ -112,22 +105,25 @@
             }
         }
 
-        // --- Fungsi untuk ganti tampilan form ---
+        // --- FUNGSI UTAMA YANG BERUBAH ---
         function togglePanelType() {
             const selectedType = document.querySelector('input[name="panelType"]:checked').value;
             
+            // Selalu tampilkan kontainer dan wajibkan input
+            secretKeyContainer.style.display = 'block';
+            secretKeyInput.required = true;
+            secretKeyInput.value = ''; // Kosongkan nilainya saat ganti
+
             if (selectedType === 'private') {
-                secretKeyContainer.style.display = 'block';
-                secretKeyInput.required = true;
+                secretKeyInput.placeholder = 'Masukkan Secret Key Private';
+                secretKeyHelpText.innerText = 'Khusus anggota Zeroix. Dapatkan di zeroix.id/zeroix/key';
                 submitButton.innerText = 'Buat Server Privat';
             } else { // public
-                secretKeyContainer.style.display = 'none';
-                secretKeyInput.required = false;
-                secretKeyInput.value = ''; // Kosongkan nilainya
+                secretKeyInput.placeholder = 'Masukkan Secret Key Public';
+                secretKeyHelpText.innerText = 'Dapatkan Secret Key Public dari administrator.';
                 submitButton.innerText = 'Buat Server Publik';
             }
             
-            // Perbarui juga opsi RAM
             updateRamOptions(selectedType);
         }
 
@@ -137,33 +133,26 @@
         // Panggil sekali saat halaman dimuat
         togglePanelType();
 
-        // --- Logika Submit Form ---
+        // --- Logika Submit Form (Tidak berubah) ---
         form.addEventListener('submit', async function(event) {
             event.preventDefault();
-            
             submitButton.disabled = true;
             resultDiv.className = '';
             resultDiv.innerText = '⏳ Membuat server, mohon tunggu...';
-
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
-            
             data.ram = parseInt(data.ram, 10);
 
             try {
-                // Perhatikan: path API adalah '/api/create'
                 const response = await fetch('/api/create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data),
                 });
-
                 const responseData = await response.json();
-
                 if (!response.ok) {
                     throw new Error(responseData.error || 'Terjadi kesalahan');
                 }
-                
                 resultDiv.className = 'success';
                 resultDiv.innerHTML = `
                     <h4>✅ Semua Berhasil Disiapkan!</h4>
@@ -175,8 +164,7 @@
                     <p><strong>RAM:</strong> ${data.ram === 0 ? 'Unlimited' : (responseData.server.limits.memory + ' MB')}</p>
                 `;
                 form.reset();
-                togglePanelType(); // Reset tampilan form ke default
-
+                togglePanelType(); 
             } catch (error) {
                 resultDiv.className = 'error';
                 resultDiv.innerText = `❌ Gagal: ${error.message}`;
@@ -185,7 +173,7 @@
             }
         });
 
-        // --- Logika Jam ---
+        // --- Logika Jam (Tidak berubah) ---
         function updateClock() {
             const clockElement = document.getElementById('clock-time');
             if (clockElement) {
