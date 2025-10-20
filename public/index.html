@@ -3,191 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Server Panel</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Create Pterodactyl Server</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="stars"></div>
-    <div class="twinkling"></div>
-
-    <header class="main-header">
-        <div class="logo">TEAM ZEROIX</div>
-        <div class="header-title">CREATE SERVER PANEL</div>
-        <div class="profile-icon"><i class="fas fa-user-circle"></i></div>
-    </header>
-
     <div class="container">
+        <h1>🚀 Buat Server Pterodactyl</h1>
         
-        <form id="createServerForm">
-            
-            <label>Tipe Server:</label>
-            <div class="server-type-options">
-                <input type="radio" id="type_private" name="panelType" value="private" required checked>
-                <label for="type_private">Private</label>
-                
-                <input type="radio" id="type_public" name="panelType" value="public" required>
-                <label for="type_public">Public</label>
+        <form id="createServerForm" class="form">
+            <div>
+                <label for="secretKey">Kunci Rahasia (Secret Key)</label>
+                <input id="secretKey" type="password" required>
             </div>
-
-            <label for="serverName">Nama Server:</label>
-            <input type="text" id="serverName" name="serverName" placeholder="Contoh: MyNodeApp" required>
-
-            <label for="ram">Pilih RAM:</label>
-            <select id="ram" name="ram" required>
+            <div>
+                <label for="serverName">Nama Server</label>
+                <input id="serverName" type="text" placeholder="Contoh: My Node.js Bot" required>
+            </div>
+            <div>
+                <label for="ram">Pilih RAM</label>
+                <select id="ram" required>
+                    <option value="1024">1 GB</option>
+                    <option value="2048">2 GB</option>
+                    <option value="3072">3 GB</option>
+                    <option value="4096">4 GB</option>
+                    <option value="5120">5 GB</option>
+                    <option value="6144">6 GB</option>
+                    <option value="7192">7 GB</option>
+                    <option value="8192">8 GB</option>
+                    <option value="9216">9 GB</option>
+                    <option value="0">Unlimited</option>
                 </select>
-
-            <div id="secretKeyContainer">
-                <label for="secretKey">Secret Key:</label>
-                <input type="password" id="secretKey" name="secretKey" placeholder="Masukkan Secret Key Private" required>
-                <small id="secretKeyHelpText">Khusus anggota Zeroix. Dapatkan di zeroix.id/zeroix/key</small>
             </div>
-            
-            <button type="submit" id="submitButton">Buat Server</button>
+            <button type="submit" id="submitButton">Buat Server Sekarang</button>
         </form>
 
-        <div id="result"></div>
-    </div>
-
-    <a href="https://wa.me/6283877842721" class="whatsapp-fab" target="_blank" aria-label="Chat on WhatsApp">
-        <i class="fab fa-whatsapp"></i>
-    </a>
-    
-    <div id="realtime-clock">
-        <span id="clock-time">00:00:00</span>
+        <div id="result" class="result"></div>
     </div>
 
     <script>
-        // --- Definisi Elemen ---
-        const panelTypeRadios = document.querySelectorAll('input[name="panelType"]');
-        const secretKeyContainer = document.getElementById('secretKeyContainer');
-        const secretKeyInput = document.getElementById('secretKey');
-        const secretKeyHelpText = document.getElementById('secretKeyHelpText'); 
-        const submitButton = document.getElementById('submitButton');
-        const form = document.getElementById('createServerForm');
-        const ramSelect = document.getElementById('ram');
-        const resultDiv = document.getElementById('result');
-
-        // --- Opsi RAM ---
-        const ramOptions = [
-            { value: "1024", text: "1 GB (1024 MB)" },
-            { value: "2048", text: "2 GB (2048 MB)" },
-            { value: "3072", text: "3 GB (3072 MB)" },
-            { value: "4096", text: "4 GB (4096 MB)" },
-            { value: "5120", text: "5 GB (5120 MB)" },
-            { value: "6144", text: "6 GB (6144 MB)" },
-            { value: "7168", text: "7 GB (7168 MB)" },
-            { value: "8192", text: "8 GB (8192 MB)" },
-            { value: "9216", text: "9 GB (9216 MB)" },
-            { value: "0",    text: "10 GB (Unlimited)" } 
-        ];
-
-        // --- Fungsi untuk update pilihan RAM ---
-        function updateRamOptions() {
-            const currentValue = ramSelect.value;
-            ramSelect.innerHTML = '<option value="" disabled>-- Pilih Ukuran RAM --</option>'; 
-            ramOptions.forEach(opt => {
-                const optionEl = document.createElement('option');
-                optionEl.value = opt.value;
-                optionEl.textContent = opt.text;
-                ramSelect.appendChild(optionEl);
-            });
-            if (ramOptions.some(opt => opt.value === currentValue)) {
-                ramSelect.value = currentValue;
-            } else {
-                ramSelect.value = ""; 
-            }
-        }
-
-        // --- Fungsi untuk ganti tampilan form ---
-        function togglePanelType() {
-            const selectedType = document.querySelector('input[name="panelType"]:checked').value;
+        // Menunggu sampai semua elemen HTML dimuat
+        document.addEventListener('DOMContentLoaded', () => {
             
-            secretKeyInput.required = true;
-            secretKeyInput.value = ''; // Kosongkan nilainya saat ganti
+            // Ambil elemen-elemen penting
+            const serverForm = document.getElementById('createServerForm');
+            const submitButton = document.getElementById('submitButton');
+            const resultDiv = document.getElementById('result');
 
-            if (selectedType === 'private') {
-                secretKeyInput.placeholder = 'Masukkan Secret Key Private';
-                secretKeyHelpText.innerText = 'Khusus anggota Zeroix. Dapatkan di zeroix.id/zeroix/key';
-                submitButton.innerText = 'Buat Server Privat';
-            } else { // public
-                secretKeyInput.placeholder = 'Masukkan Secret Key Public';
-                secretKeyHelpText.innerText = 'Dapatkan Secret Key Public dari administrator.';
-                submitButton.innerText = 'Buat Server Publik';
-            }
-        }
+            // Tambahkan 'listener' ke form
+            serverForm.addEventListener('submit', async function(e) {
+                e.preventDefault(); // Mencegah form mengirim data secara tradisional
 
-        // Tambahkan event listener ke radio buttons
-        panelTypeRadios.forEach(radio => radio.addEventListener('change', togglePanelType));
-        
-        // Panggil fungsi saat halaman dimuat
-        togglePanelType();
-        updateRamOptions();
+                // Ambil nilai dari input
+                const secretKey = document.getElementById('secretKey').value;
+                const serverName = document.getElementById('serverName').value;
+                const ram = document.getElementById('ram').value;
 
-        // --- Logika Submit Form ---
-        form.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            submitButton.disabled = true;
-            resultDiv.className = '';
-            resultDiv.innerText = '⏳ Membuat server, mohon tunggu...';
-            
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            data.ram = parseInt(data.ram, 10);
+                // Ubah tampilan tombol dan hasil
+                submitButton.disabled = true;
+                submitButton.textContent = 'Sedang Memproses...';
+                resultDiv.className = 'result'; // Reset style hasil
+                resultDiv.textContent = '';     // Kosongkan hasil
 
-            try {
-                const response = await fetch('/api/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data),
-                });
+                try {
+                    // Kirim data ke API kita (/api/create)
+                    const response = await fetch('/api/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ serverName, ram, secretKey }),
+                    });
+
+                    // Ambil data JSON dari respon
+                    const data = await response.json();
+
+                    // Periksa jika respon GAGAL (status bukan 2xx)
+                    if (!response.ok) {
+                        // Lemparkan error agar ditangkap oleh 'catch'
+                        throw new Error(data.error || 'Gagal membuat server.');
+                    }
+
+                    // Jika SUKSES
+                    resultDiv.className = 'result result-success'; // Tampilkan box sukses
+                    resultDiv.innerHTML = `<strong>✅ Semua Berhasil Disiapkan!</strong>
+<pre>
+URL Panel: ${data.panelUrl}
+Username:  ${data.username}
+Email:     ${data.email}
+Password:  ${data.password}
+---------------------
+Server:    ${data.serverName}
+RAM:       ${data.serverRam} MB
+</pre>`;
+
+                } catch (err) {
+                    // Jika GAGAL (dari 'throw' di atas)
+                    resultDiv.className = 'result result-error'; // Tampilkan box error
+                    resultDiv.innerHTML = `<strong>❌ Gagal!</strong><p>${err.message}</p>`;
                 
-                // INI PERBAIKANNYA: Selalu baca response.json()
-                const responseData = await response.json();
-
-                if (!response.ok) {
-                    // Ambil pesan error dari JSON
-                    throw new Error(responseData.error || 'Terjadi kesalahan');
+                } finally {
+                    // Apapun hasilnya (sukses/gagal), kembalikan tombol ke normal
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Buat Server Sekarang';
                 }
-                
-                resultDiv.className = 'success';
-                resultDiv.innerHTML = `
-                    <h4>✅ Semua Berhasil Disiapkan!</h4>
-                    <p><strong>URL Panel:</strong> ${responseData.panelURL}</p><hr>
-                    <p><strong>Username:</strong> ${responseData.user.username}</p>
-                    <p><strong>Email:</strong> ${responseData.user.email}</p>
-                    <p><strong>Password:</strong> ${responseData.password}</p><hr>
-                    <p><strong>Nama Server:</strong> ${responseData.server.name}</p>
-                    <p><strong>RAM:</strong> ${data.ram === 0 ? 'Unlimited' : (responseData.server.limits.memory + ' MB')}</p>
-                `;
-                form.reset();
-                togglePanelType(); 
-                updateRamOptions();
-            } catch (error) {
-                resultDiv.className = 'error';
-                resultDiv.innerText = `❌ Gagal: ${error.message}`;
-            } finally {
-                submitButton.disabled = false;
-            }
+            });
         });
-
-        // --- Logika Jam ---
-        function updateClock() {
-            const clockElement = document.getElementById('clock-time');
-            if (clockElement) {
-                const now = new Date();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const seconds = String(now.getSeconds()).padStart(2, '0');
-                clockElement.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
     </script>
-</body>
+    </body>
 </html>
