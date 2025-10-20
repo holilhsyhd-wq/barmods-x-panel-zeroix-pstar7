@@ -1,0 +1,10 @@
+{
+  "name": "create-server-panel",
+  "version": "1.0.0",
+  "description": "Web interface to create Pterodactyl servers",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  }
+}
